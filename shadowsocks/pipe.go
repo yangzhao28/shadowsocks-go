@@ -14,7 +14,7 @@ func SetReadTimeout(c net.Conn) {
 	}
 }
 
-func HackPipeThenClose(src, dst net.Conn, handle func(buf []byte, l int)) {
+func HackPipeThenClose(src, dst net.Conn, handle func(buf []byte, l int) bool) {
 	defer dst.Close()
 	buf := leakyBuf.Get()
 	defer leakyBuf.Put(buf)
@@ -22,7 +22,9 @@ func HackPipeThenClose(src, dst net.Conn, handle func(buf []byte, l int)) {
 		SetReadTimeout(src)
 		n, err := src.Read(buf)
 		if handle != nil {
-			handle(buf, n)
+			if quit := handle(buf, n); quit {
+				break
+			}
 		}
 		// read may return EOF with n > 0
 		// should always process n > 0 bytes before handling error
